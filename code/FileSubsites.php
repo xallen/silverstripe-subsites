@@ -60,9 +60,6 @@ class FileSubsites extends DataObjectDecorator {
 		 *	total P.I.T.A to diagnose :-P I'm sorry this is such an ugly kludge! */
 		if(preg_match('/(\'|"|`|)Name(\'|"|`|).* AND .*(\'|"|`|)ParentID(\'|"|`|)/', $query->where[0])) return;
 		
-		TODO: WORK OUT WHY THE ABOVE AFFECTS FILE EDIT WINDOW (ASSETADMIN) AND THE INTENDED TARGET
-		SUGGEST: QUERYNAME VARIABLE FOR MODELS -- allows to check by $query->Name (ex: DUPLICATE_FILENAME_CHECK)
-		
 		/* Here we test for queries from TreeDropdownField and its subclasses. These queries are always(?) related
 		 *	to retrieving a list of Files and Folders for a subsite for TreeDropdownFields. E.g. LinkForm, 
 		 *	PictureStrip in WYSIWYG editor. */
