@@ -61,6 +61,7 @@ class GroupSubsites extends DataObjectDecorator implements PermissionProvider {
 
 			$subsites = Subsite::accessible_sites(array('ADMIN', 'SECURITY_SUBSITE_GROUP'), true);
 			$subsiteMap = $subsites->toDropdownMap();
+			$subsiteMap[-1] = 'Global (Shared)';
 			
 			// Interface is different if you have the rights to modify subsite group values on
 			// all subsites
@@ -111,7 +112,8 @@ class GroupSubsites extends DataObjectDecorator implements PermissionProvider {
 	 */
 	function augmentSQL(SQLQuery &$query) {
 		if(Subsite::$disable_subsite_filter) return;
-		if(Cookie::get('noSubsiteFilter') == 'true') return;
+		if(Subsite::$group_subsites_filter) return;
+		
 
 		// If you're querying by ID, ignore the sub-site - this is a bit ugly...
 		if(!$query->filtersOnID()) {
@@ -175,7 +177,7 @@ class GroupSubsites extends DataObjectDecorator implements PermissionProvider {
 		return array(
 			'SECURITY_SUBSITE_GROUP' => array(
 				'name' => _t('GroupSubsites.MANAGE_SUBSITES', 'Manage subsites for groups'),
-				'category' => _t('Permissions.PERMISSIONS_CATEGORY', 'Roles and access permissions'),
+				'category' => _t('Permissions.SUBSITES_CATEGORY', 'Subsite roles and access permissions'),
 				'help' => _t('GroupSubsites.MANAGE_SUBSITES_HELP', 'Ability to limit the permissions for a group to one or more subsites.'),
 				'sort' => 200
 			)

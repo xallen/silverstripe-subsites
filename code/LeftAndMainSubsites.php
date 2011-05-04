@@ -13,6 +13,20 @@ class LeftAndMainSubsites extends Extension {
 		Requirements::css('subsites/css/LeftAndMain_Subsites.css');
 		Requirements::javascript('subsites/javascript/LeftAndMain_Subsites.js');
 		Requirements::javascript('subsites/javascript/VirtualPage_Subsites.js');
+		
+		/* Having -1 as a Subsite ID will NOT go down well in most places, so we need to
+		 * remedy it if applicable. The only case where I can see this being important is
+		 * when switching from AssetAdmin, having selected 'Global (Shared)' and then
+		 * switching to another section in LeftAndMain. Here we will ensure it is changed
+		 * back to Main Site, or default, if not in a -1 applicable section.
+		 */
+		if(Subsite::currentSubsiteID() == -1) {
+			// Not AssetAdmin or SecurityAdmin, we should change our SubsiteID appropriately
+			if($this->owner->class != 'AssetAdmin' and $this->owner->class != 'SecurityAdmin') {
+				Subsite::changeSubsite(0); //TODO: default site may be more appropriate, handle that
+			}
+		}
+		
 	}
 	
 	/**
@@ -31,10 +45,10 @@ class LeftAndMainSubsites extends Extension {
 	public function changesubsite() {
 		$id = $_REQUEST['SubsiteID'];
 
-		Subsite::changeSubsite($id==-1 ? 0 : $id);
+		Subsite::changeSubsite($id);
 		
-		if ($id == '-1') Cookie::set('noSubsiteFilter', 'true', 1);
-		else Cookie::set('noSubsiteFilter', 'false', 1);
+		if ($id == '-1') Subsite::toggle_group_subsites_filter(true); // disable filter
+		else Subsite::toggle_group_subsites_filter(false); // enable filter
 		
 		if(Director::is_ajax()) {
 			$tree = $this->owner->SiteTreeAsUL();
@@ -50,7 +64,8 @@ class LeftAndMainSubsites extends Extension {
 		
 		switch($this->owner->class) {
 			case "AssetAdmin":
-				$subsites = Subsite::accessible_sites($accessPerm, true, "Shared files & images");
+				if(Permission::check('SUBSITE_ASSETS_GLOBAL_ACCESS')) $subsites = Subsite::accessible_sites($accessPerm, true, 'Main Site', null, true, 'Global (Shared)');
+				else $subsites = Subsite::accessible_sites($accessPerm, true, 'Main Site');
 				break;
 				
 			case "SecurityAdmin":

@@ -18,6 +18,12 @@ class Subsite extends DataObject implements PermissionProvider {
 	 * Only works for reading. An object cannot be written to more than 1 subsite.
 	 */
 	static $force_subsite = null;
+	
+	/**
+	 * @var boolean $group_subsites_filter If enabled, bypasses the query decoration
+	 * to limit the subsites returned.
+	 */
+	static $group_subsites_filter = false;
 
 	static $write_hostmap = true;
 	static $default_sort = "\"Title\" ASC";
@@ -408,8 +414,9 @@ JS;
 	 * @param $permCode array|string Either a single permission code or an array of permission codes.
 	 * @param $includeMainSite If true, the main site will be included if appropriate.
 	 * @param $mainSiteTitle The label to give to the main site
+	 * @param $member Force member used for permission testing.
 	 */
-	function accessible_sites($permCode, $includeMainSite = false, $mainSiteTitle = "Main site", $member = null) {
+	function accessible_sites($permCode, $includeMainSite = false, $mainSiteTitle = 'Main Site', $member = null, $includeGlobalSite = false, $globalSiteTitle = 'Global (Shared)') {
 		// Rationalise member arguments
 		if(!$member) $member = Member::currentUser();
 		if(!$member) return new DataObjectSet();
@@ -464,8 +471,18 @@ JS;
 			}
 		}
 
-		// Include the main site
-		if(!$subsites) $subsites = new DataObjectSet();
+		// Ensure a DataObjectSet exists to append to - the list may have been blank, etc
+		if(!$subsites) $subsites = new DataObjectSet(); 
+		
+		// Include the global site (we want this second in the list due to an interesting Sapphire core bug)
+		if($includeGlobalSite) {
+			$globalSite = new Subsite();
+			$globalSite->ID = -1;
+			$globalSite->Title = $globalSiteTitle;
+			$subsites->insertFirst($globalSite);
+		}
+		
+		// Include the main site (first)
 		if($includeMainSite) {
 			if(!is_array($permCode)) $permCode = array($permCode);
 			if(self::hasMainSitePermission($member, $permCode)) {
@@ -526,10 +543,28 @@ JS;
 	function providePermissions() {
 		return array(
 			'SUBSITE_ASSETS_CREATE_SUBSITE' => array(
-				'name' => _t('Subsite.MANAGE_ASSETS', 'Manage assets for subsites'),
-				'category' => _t('Permissions.PERMISSIONS_CATEGORY', 'Roles and access permissions'),
+				'name' => _t('Subsite.MANAGE_ASSETS', 'Manage asset ownership for subsites'),
+				'category' => _t('Permissions.SUBSITES_CATEGORY', 'Subsite roles and access permissions'),
 				'help' => _t('Subsite.MANAGE_ASSETS_HELP', 'Ability to select the subsite to which an asset folder belongs. Requires "Access to Files & Images."'),
 				'sort' => 300
+			),
+			'SUBSITE_ASSETS_ROOT_WRITE' => array(
+				'name' => _t('Subsite.ASSETS_ROOT_WRITE', 'Can write to root of the assets folder'),
+				'category' => _t('Permissions.SUBSITES_CATEGORY', 'Subsite roles and access permissions'),
+				'help' => _t('Subsite.ASSETS_ROOT_WRITE_HELP', 'Ability to write to the root of the assets folder. Requires "Access global/shared assets."'),
+				'sort' => 300
+			),
+			'SUBSITE_ASSETS_GLOBAL_ACCESS' => array(
+				'name' => _t('Subsite.ASSETS_GLOBAL_ACCESS', 'View global/shared assets'),
+				'category' => _t('Permissions.SUBSITES_CATEGORY', 'Subsite roles and access permissions'),
+				'help' => _t('Subsite.ASSETS_GLOBAL_ACCESS_HELP', 'Ability to browse and utilize global assets. Requires "Access global/shared assets."'),
+				'sort' => 311
+			),
+			'SUBSITE_ASSETS_GLOBAL_WRITE' => array(
+				'name' => _t('Subsite.ASSETS_GLOBAL_WRITE', 'Modify global/shared assets'),
+				'category' => _t('Permissions.SUBSITES_CATEGORY', 'Subsite roles and access permissions'),
+				'help' => _t('Subsite.ASSETS_GLOBAL_WRITE_HELP', 'Ability to create, modify and delete global assets. Requires "Access global/shared assets."'),
+				'sort' => 312
 			)
 		);
 	}
@@ -548,6 +583,14 @@ JS;
 	static function disable_subsite_filter($disabled = true) {
 		self::$disable_subsite_filter = $disabled;
 	}
+	
+	/**
+	 * Toggles filtering of Group_Subsites
+	 */
+	static function toggle_group_subsites_filter($toggle = true) {
+		self::$group_subsites_filter = $toggle;
+	}
+	
 }
 
 /**
